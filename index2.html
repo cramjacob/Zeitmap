@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<body>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="PapaParse-4.3.2/papaparse.js"></script>
+
+
+<script src="topojson.v2.min.js"></script>
+
+<div align="center" id="container1" style=" width: 80%; max-height: 80% "></div>
+<script src="datamaps.usa.min.js"></script>
+
+
+<script>
+
+    var results = Papa.parse("hard.csv", {
+        download: true,
+        complete: proc
+    });
+    var max = 0.000517019;
+
+    var rw = d3.scale.linear().domain([1, 100])
+        .interpolate(d3.interpolateHcl)
+        .range([d3.rgb('#c7c4ff'), d3.rgb("#ff805c")]);
+
+    var bw = d3.scale.linear().domain([1, 100])
+        .interpolate(d3.interpolateHcl)
+        .range([d3.rgb("#d1cdff"), d3.rgb('#009790')]);
+
+    var fills = {};
+
+    function proc(results) {
+        var data = {};
+        var i = 0;
+        results.data.forEach(function (result) {
+
+            if (result[0] != "") {
+                if (parseFloat(result[2]) / max   > 0) {
+                    fills[i + ""] = bw(parseFloat(result[2]) / max);
+                }else{
+                    fills[i + ""] = rw(parseFloat(result[2]) / max);
+
+                }
+
+
+        data[result[0]] = {fillKey: "" + i}
+
+    i++;
+    }
+
+
+    })
+    ;
+    console.log(fills);
+    console.log(data);
+
+
+    var bad = bw(100);
+    var good = rw(100);
+    var map = new Datamap({
+            scope: 'usa',
+            element: document.getElementById('container1'),
+            projection: 'mercator',
+            height: 1000,
+
+
+            fills: fills
+            ,
+
+            data: data
+        }
+    )
+
+    }
+    config_geo(hide.hideHawaiiAndAlaska = TRUE);
+</script>
+</body>
