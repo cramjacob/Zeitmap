@@ -1,78 +1,223 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Tweet Analysis Map</title>
+    <script src="//d3js.org/d3.v3.min.js"></script>
+    <script src="PapaParse-4.3.2/papaparse.js"></script>
+    <script src="topojson.v2.min.js"></script>
+    <script src="datamaps.usa.min.js"></script>
+    <script>
+        var today = {};
+        today[0] = "9/17/2016";
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=PT+Serif');
+
+        h1 {
+            font-family: "PT Serif", sans-serif;
+            text-align: center;
+        }
+
+        h1:first-child {
+            margin-bottom: 0;
+        }
+
+        h3 {
+            font-family: "PT Serif", sans-serif;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        body {
+            background-color: #5f5a65;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='12' viewBox='0 0 20 12'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='charlie-brown' fill='%23726d7a' fill-opacity='0.4'%3E%3Cpath d='M9.8 12L0 2.2V.8l10 10 10-10v1.4L10.2 12h-.4zm-4 0L0 6.2V4.8L7.2 12H5.8zm8.4 0L20 6.2V4.8L12.8 12h1.4zM9.8 0l.2.2.2-.2h-.4zm-4 0L10 4.2 14.2 0h-1.4L10 2.8 7.2 0H5.8z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            margin: 0;
+            padding: 0;
+        }
+
+        #box {
+            display: flex;
+            height: 100vh;
+        }
+
+        #map-container {
+            flex-grow: 1;
+        }
+
+        #sidebar {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100vh;
+            width: 200px;
+            background-color: #eee;
+            box-shadow: 0 0 20px 0px rgba(0, 0, 0, 0.2);
+        }
+
+        .scroller {
+            overflow-y: scroll;
+            width: 31px;
+            margin: auto;
+        }
+
+        .map {
+            position: absolute;
+            opacity: 0;
+            height: 100vh;
+            width: calc(100% - 200px);
+        }
+
+        .map.active {
+            opacity: 1;
+            z-index: 1;
+        }
+
+        .scroller::-webkit-scrollbar {
+            width: 30px;
+        }
+
+        .scroller::-webkit-scrollbar-thumb {
+            border-radius: 4px;
+            background-color: #333;
+            width: 30px;
+        }
+
+        .scroller::-webkit-scrollbar-track {
+            border-radius: 4px;
+            width: 15px;
+            background: #ddd;
+            margin: auto;
+        }
+
+        .inner-scroll {
+            min-height: 10000px;
+        }
+    </style>
+</head>
+
 <body>
+<div id="box">
+    <div id="map-container"></div>
+    <div id="sidebar">
+        <h1>Aug 2017</h1>
+        <h3>
+            <div id="date-collector">
+                9/17/2016
+            </div>
+        </h3>
+        <div class="scroller">
+            <div class="inner-scroll"></div>
+        </div>
+        <h1>Sep 2016</h1>
+    </div>
+</div>
 
-<script src="https://d3js.org/d3.v3.min.js"></script>
-<script src="PapaParse-4.3.2/papaparse.js"></script>
-
-
-<script src="topojson.v2.min.js"></script>
-
-<div align="center" id="container1" style=" width: 80%; max-height: 80% "></div>
-<script src="datamaps.usa.min.js"></script>
-
+</div>
 
 <script>
 
-    var results = Papa.parse("hard.csv", {
-        download: true,
-        complete: proc
+    const NUM_CSV = 332;
+    var j = 0;
+
+    for (let i = 0; i < NUM_CSV; i++) {
+
+        let mapNode = document.createElement('div');
+        mapNode.id = `map${i}`;
+        mapNode.className = "map";
+        document.getElementById('map-container').appendChild(mapNode);
+
+        Papa.parse(`csv/report${i}.csv`, {
+            download: true,
+            complete: (results) => proc(results, i)
     });
-    var max = 0.000517019;
+    }
 
-    var rw = d3.scale.linear().domain([1, 100])
-        .interpolate(d3.interpolateHcl)
-        .range([d3.rgb('#c7c4ff'), d3.rgb("#ff805c")]);
-
-    var bw = d3.scale.linear().domain([1, 100])
-        .interpolate(d3.interpolateHcl)
-        .range([d3.rgb("#d1cdff"), d3.rgb('#009790')]);
+    document.getElementById('map0').classList.add('active');
 
     var fills = {};
 
-    function proc(results) {
+    function proc(results, idx) {
+        var min = samplePct(results, 0.1);
+        var max = samplePct(results, 0.9);
+
         var data = {};
         var i = 0;
         results.data.forEach(function (result) {
+            //var baseBadColor = d3.hsl(222, 0.05, 0.38);
+            var maxBadColor = d3.hsl(220, 0.25, 0.3);
+            var midColor1 = d3.hsl(200, 0.15, 0.35);
+            var midColor2 = d3.hsl(50, 0.3, 0.45);
+            var maxGoodColor = d3.hsl(50, 0.8, 0.5);
+
+            var badColor = d3.scale.linear()
+                .domain([min, -0.0000001, 0.000000001, max])
+                .range([maxBadColor, midColor1, midColor2, maxGoodColor]);
+
+            //var baseGoodColor = d3.hsl(140, 0.05, 0.42);
+            // var goodColor = d3.scale.linear().domain([mid, max])
+            //     .interpolate(d3.interpolateHcl)
+            //     .range([baseGoodColor, maxGoodColor]);
 
             if (result[0] != "") {
-                if (parseFloat(result[2]) / max   > 0) {
-                    fills[i + ""] = bw(parseFloat(result[2]) / max);
-                }else{
-                    fills[i + ""] = rw(parseFloat(result[2]) / max);
+                let flt = parseFloat(result[2]);
+                flt = Math.max(flt, min);
+                flt = Math.min(flt, max);
+                //if (parseFloat(result[2]) / max < 0) {
+                fills[i + ""] = badColor(flt);
+                // }else{
+                //     fills[i + ""] = goodColor(parseFloat(result[2]));
+                // }
+                today[j] = result[1];
+                data[result[0]] = {fillKey: "" + i}
+                i++;
+            }
+        });
+        j++;
 
-                }
+        //       console.log(fills);
+        //     console.log(data);
 
-
-        data[result[0]] = {fillKey: "" + i}
-
-    i++;
-    }
-
-
-    })
-    ;
-    console.log(fills);
-    console.log(data);
-
-
-    var bad = bw(100);
-    var good = rw(100);
-    var map = new Datamap({
+        var map = new Datamap({
             scope: 'usa',
-            element: document.getElementById('container1'),
+            element: document.getElementById('map' + idx),
             projection: 'mercator',
-            height: 1000,
+            fills: fills,
+            data: data,
+            geographyConfig: {
+                borderColor: "#3a3159",
+                borderWidth: 1,
+                hideHawaiiAndAlaska: true,
+                highlightFillColor: '#aaa',
+                highlightBorderColor: '#3a3159',
+                highlightBorderWidth: 1,
 
-
-            fills: fills
-            ,
-
-            data: data
-        }
-    )
-
+            }
+        });
     }
-    config_geo(hide.hideHawaiiAndAlaska = TRUE);
+
+    function samplePct(results, pct) {
+        var sorted = results.data.map(result => parseFloat(result[2]))
+    .sort();
+
+        return sorted[Math.floor(sorted.length * pct)];
+    }
+
+    function update() {
+        var scrollPct = document.querySelector('.scroller').scrollTop / 10000;
+        let idx = Math.floor(scrollPct * NUM_CSV);
+        let active = document.querySelector('.active');
+        if (active)
+            active.classList.remove('active');
+        if(today[idx] != null)
+            document.getElementById('date-collector').innerText = today[idx];
+
+        document.querySelector(`#map${idx}`).classList.add('active');
+    }
+
+    document.querySelector('.scroller').onscroll = update;
 </script>
 </body>
+
+</html>
+
