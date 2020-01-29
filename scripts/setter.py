@@ -13,16 +13,16 @@ with open("WithCounties.csv", "rU") as csvfile:
 		
 		
 prev=""
-penis=[]
+x=[]
 for i in range(0,len(redbull)):
 	curr=redbull[i]	
 	if prev!= curr:
-		penis.append(curr)
+		x.append(curr)
 	prev=curr	
 		
 
 
-deadbull = penis
+deadbull = x
 		
 Stuff = open('WithCounties1.csv','w')
 for i in range(0,len(deadbull)):

@@ -4,7 +4,7 @@ import os
 cities = []
 counties = []
 
-penis = []
+x = []
 
 with open("CityHandle_new.csv", "rU") as csvfile:
 	readcsv = csv.reader(csvfile, delimiter=',')
@@ -22,7 +22,7 @@ with open("Cities-Counties.csv", "rU") as csvfile:
 		
 		
 		
-penis = cities
+x = cities
 A=[]
 		
 for i in range(0,len(cities)):
@@ -35,7 +35,7 @@ for i in range(0,len(cities)):
 		
 		
 		if (state == state1 and city == city1) or (state == state1 and city == cityAlias):			
-			A.append([penis[i]+[counties[j][3]]])
+			A.append([x[i]+[counties[j][3]]])
 
 
 Stuff = open('WithCounties1.csv','w')
